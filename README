@@ -1,0 +1,30 @@
+This is a fork of Alex Li's cas_authentication plugin. (http://code.google.com/p/rc-cas-plugin)
+
+The main difference is that this plugin allows users to either authn using
+the normal login form or a CAS (Central Authentication System - http://www.jasig.org/cas)
+server. It also should work in Roundcube 0.7 without having to modify Roundcube code.
+
+This plugin has been tested and works with the following:
+ - RHEL (specifically, Oracle Enterprise Linux) 6.1 x64
+ - JASIG CAS 3.3.2 (http://www.jasig.org/cas)
+ - pam_cas (https://sourcesup.cru.fr/frs/?group_id=213, Pam_cas-2.0.11-esup-2.0.5.tar.gz)
+ - up-imapproxy 1.2.7 (http://www.imapproxy.org)
+ - Dovecot 2.0.13 (http://dovecot.org)
+
+Setup is very similar to most Roundcube plugins. Copy cas_authn_opt to your Roundcube
+plugin directory. Then, copy config.inc.php.dist to config.inc.php, edit for your environment, 
+and activate the plugin. Some things to be aware of:
+
+1) This plugin assumes your IMAP server can authenticate (a) CAS proxy tickets (if opt_cas_proxy
+   is true) or (b) any user using the "master" password (if opt_cas_proxy is false and 
+   opt_cas_imap_password is set). For (a), the most common way to do this is with pam_cas. See
+   http://www.esup-portail.org/consortium/espace/SSO_1B/tech/cas/cas_pam.html for help
+   configuring and testing that. (It is in French, but Google Translate does a good job.)
+
+2) This plugin assumes you are not using SMTP authentication.
+
+TODO/Known Issues:
+1) SMTP Authentication probably does not work, even to an SMTP server that is using pam_cas.
+   It might work if PAM itself caches passwords and the SMTP authn attempt uses the same
+   cache as IMAP. I'm working on fixing this, probably by adding CAS proxy tickets to 
+   SMTP authn in Roundcube.
