@@ -22,10 +22,9 @@ and activate the plugin. Some things to be aware of:
    http://www.esup-portail.org/consortium/espace/SSO_1B/tech/cas/cas_pam.html for help
    configuring and testing that. (It is in French, but Google Translate does a good job.)
 
-2) This plugin assumes you are not using SMTP authentication.
+2) This plugin assumes you are not using SMTP authentication. If you are, things may not work.
 
 TODO/Known Issues:
-1) SMTP Authentication probably does not work, even to an SMTP server that is using pam_cas.
-   It might work if PAM itself caches passwords and the SMTP authn attempt uses the same
-   cache as IMAP. I'm working on fixing this, probably by adding CAS proxy tickets to 
-   SMTP authn in Roundcube.
+1) SMTP Authentication is work in progress. It should work, but if it doesn't, edit your
+   main.inc.php file to not have a username in the SMTP auth section. That should
+   prevent Roundcube from trying to do SMTP AUTH.

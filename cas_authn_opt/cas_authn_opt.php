@@ -37,6 +37,7 @@ class cas_authn_opt extends rcube_plugin {
         $this->add_hook('startup', array($this, 'startup'));
         $this->add_hook('authenticate', array($this, 'authenticate'));
         $this->add_hook('imap_connect', array($this, 'imap_connect'));
+        $this->add_hook('smtp_connect', array($this, 'smtp_connect'));
         $this->add_hook('template_object_loginform', array($this, 'add_cas_login_html'));
     }
 
@@ -129,7 +130,7 @@ class cas_authn_opt extends rcube_plugin {
     /**
      * Inject IMAP authentication credentials
      * If you are using this plugin in proxy mode, this will set the password 
-     * to be used in RCMAIL->imap_connect to a Proxy Ticket for cas_imap_name.
+     * to be used in RCMAIL->imap_connect to a Proxy Ticket for opt_cas_imap_name.
      * If you are not using this plugin in proxy mode, it will do nothing. 
      * If you are using normal authentication, it will do nothing. 
      *
@@ -170,6 +171,34 @@ class cas_authn_opt extends rcube_plugin {
         return $args;
     }
  
+    /**
+     * Inject SMTP authentication credentials
+     * If you are using this plugin in proxy mode, this will set the password 
+     * to be used in RCMAIL->smtp->connect to a new Proxy Ticket for opt_cas_smtp_name.
+     * If you are not using this plugin in proxy mode, it will do nothing. 
+     * If you are using normal authentication, it will do nothing. 
+     *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
+     */
+    function smtp_connect($args) {
+        // retrieve configuration
+        $cfg = rcmail::get_instance()->config->all();
+        
+        // RoundCube is acting as CAS proxy
+        if ($cfg['opt_cas_proxy']) {
+            // initialize CAS client
+            $this->cas_init();
+
+            // retrieve a new proxy ticket and use it as SMTP password
+            if (phpCAS::isSessionAuthenticated()) {
+                $args['smtp_pass'] = phpCAS::retrievePT($cfg['opt_cas_smtp_name'], $err_code, $output);
+            }
+        }
+            
+        return $args;
+    }
+
     /**
     * Prepend link to CAS login above the Roundcube login form if the user would like to
     * login with CAS.

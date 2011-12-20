@@ -19,6 +19,10 @@ $rcmail_config['opt_cas_pgt_dir'] = '/tmp';
 //     This service name must be authorized to be used with the CAS server.
 $rcmail_config['opt_cas_imap_name'] = 'name_of_imap_service';
 
+// name of the SMTP service. Will only be used if cas_proxy is set to true.
+//     This service name must be authorized to be used with the CAS server.
+$rcmail_config['opt_cas_smtp_name'] = 'name_of_smtp_service';
+
 // whether the IMAP server caches proxy tickets it has received for subsequent
 //    requests. Will only be used if cas_proxy is set to true. If set to true,
 //    proxy tickets will be reused to connect to the IMAP server until an IMAP
