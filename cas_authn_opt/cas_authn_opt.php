@@ -88,6 +88,13 @@ class cas_authn_opt extends rcube_plugin {
             // initialize CAS client
             $this->cas_init();
             
+            // Look for _url GET variable and update FixedServiceURL if present to enable deep linking.
+            $query = array();
+            if ($url = get_input_value('_url', RCUBE_INPUT_GET)) {
+                phpCAS::setFixedServiceURL($this->generate_url(array('action' => 'caslogin', '_url' => $url)));
+                parse_str($url, $query);
+            }
+
             // Force the user to log in to CAS, using a redirect if necessary.
             phpCAS::forceAuthentication();
 
@@ -115,7 +122,7 @@ class cas_authn_opt extends rcube_plugin {
             rcmail_log_login();
          
             // allow plugins to control the redirect url after login success
-            $redir = $RCMAIL->plugins->exec_hook('login_after', array('_task' => 'mail'));
+            $redir = $RCMAIL->plugins->exec_hook('login_after', $query + array('_task' => 'mail'));
             unset($redir['abort'], $redir['_err']);
          
             // send redirect, otherwise control will reach the mail display and fail because the 
