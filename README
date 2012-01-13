@@ -2,9 +2,10 @@ This is a fork of Alex Li's cas_authentication plugin. (http://code.google.com/p
 
 The main difference is that this plugin allows users to either authn using
 the normal login form or a CAS (Central Authentication System - http://www.jasig.org/cas)
-server. It also should work in Roundcube 0.7 without having to modify Roundcube code.
+server.
 
 This plugin has been tested and works with the following:
+ - Roundcube 0.6-0.7
  - RHEL (specifically, Oracle Enterprise Linux) 6.1 x64
  - JASIG CAS 3.3.2 (http://www.jasig.org/cas)
  - pam_cas (https://sourcesup.cru.fr/frs/?group_id=213, Pam_cas-2.0.11-esup-2.0.5.tar.gz)
@@ -22,9 +23,4 @@ and activate the plugin. Some things to be aware of:
    http://www.esup-portail.org/consortium/espace/SSO_1B/tech/cas/cas_pam.html for help
    configuring and testing that. (It is in French, but Google Translate does a good job.)
 
-2) This plugin assumes you are not using SMTP authentication. If you are, things may not work.
-
-TODO/Known Issues:
-1) SMTP Authentication is work in progress. It should work, but if it doesn't, edit your
-   main.inc.php file to not have a username in the SMTP auth section. That should
-   prevent Roundcube from trying to do SMTP AUTH.
+2) If opt_cas_proxy is true and Roundcube is set to authenticate to SMTP, this plugin will generate a PT for your SMTP service and send that to the SMTP server. As with IMAP, you should test this via telnet to make sure your SMTP server is validating CAS tickets.
