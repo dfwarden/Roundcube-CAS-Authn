@@ -198,7 +198,9 @@ class cas_authn_opt extends rcube_plugin {
             $this->cas_init();
 
             // retrieve a new proxy ticket and use it as SMTP password
+            // Without forceAuthentication() then retrievePT() fails.
             if (phpCAS::isSessionAuthenticated()) {
+                phpCAS::forceAuthentication();
                 $args['smtp_pass'] = phpCAS::retrievePT($cfg['opt_cas_smtp_name'], $err_code, $output);
             }
         }
@@ -214,18 +216,12 @@ class cas_authn_opt extends rcube_plugin {
         $RCMAIL = rcmail::get_instance();
         $this->add_texts('localization');
     
-        $loginbutton = new html_inputfield(array(
-                                'type' => 'button',
-                                'class' => 'button mainaction',
-                                'value' => $this->gettext('casoptloginbutton')
-                            ));    
         $caslogin_content = html::div(array(
                                 'style' => 'border-bottom: 1px dotted #000; text-align: center; padding-bottom: 1em; margin-bottom: 1em;'),
                                 html::a(array(
-                                    'style' => 'text-decoration: none;',
                                     'href' => $this->generate_url(array('action' => 'caslogin')),
                                     'title' => $this->gettext('casoptloginbutton')),
-                                    $loginbutton->show()
+                                    $this->gettext('casoptloginbutton')
                                 )
                             );
         $args['content'] = $caslogin_content . $args['content'];
