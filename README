@@ -40,8 +40,8 @@ Some things to be aware of:
 
   - If you are running Roundcube on multiple servers behind a load balancer
     and cas_proxy is true, your PGTIOU storage must be shared; when the CAS
-	server does the PGT callback there is no guarantee (unless you do 
-	something special) that it will hit the same host the user is on. And 
-	if you're not sure what "PGT callback" is, check out 
-	https://wiki.jasig.org/display/CAS/Proxy+CAS+Walkthrough
-	especially the PDF linked at the bottom.
+    server does the PGT callback there is no guarantee (unless you do 
+    something special) that it will hit the same host the user is on. And 
+    if you're not sure what "PGT callback" is, check out 
+    https://wiki.jasig.org/display/CAS/Proxy+CAS+Walkthrough
+    especially the PDF linked at the bottom.
