@@ -9,9 +9,9 @@ The main differences are:
  - This plugin supports using a CAS proxy ticket for SMTP authn
 
 This plugin has been tested and works with the following:
- - Roundcube 0.6-0.7
- - RHEL (specifically, Oracle Enterprise Linux) 6.1-6.2 x64
- - JASIG CAS 3.3.2, 3.4.11 (http://www.jasig.org/cas)
+ - Roundcube 0.6-0.8
+ - RHEL (specifically, Oracle Enterprise Linux) 6.1-6.2 x64 - DEBIAN Squeeze 2.6.26 x64
+ - JASIG CAS 3.3.2, 3.4.11, 3.4.14 (http://www.jasig.org/cas)
  - pam_cas (https://sourcesup.cru.fr/frs/?group_id=213, Pam_cas-2.0.11-esup-2.0.5.tar.gz)
  - phpCAS 1.2.2 (php-pear-CAS from EPEL)
  - up-imapproxy 1.2.7 (http://www.imapproxy.org)

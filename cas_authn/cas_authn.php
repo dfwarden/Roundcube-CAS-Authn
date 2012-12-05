@@ -10,12 +10,13 @@
  * 
  * The vast majority of this plugin was written by Alex Li. David Warden modified
  * it to be an optional authentication method that can work with stock Roundcube
- * version 0.7.
+ * version 0.8.
  *
- * @version 0.7.0
+ * @version 0.8.0
  * @author David Warden (dfwarden@gmail.com)
  * @author Alex Li (li@hcs.harvard.edu)
- * 
+ * @contributor Julien Gribonvald (julien.gribonvald@recia.fr)
+ * @contributor Maxime Bossard (maxime.bossard@recia.fr)
  */
 
 class cas_authn extends rcube_plugin {
@@ -47,13 +48,16 @@ class cas_authn extends rcube_plugin {
      * these actions need to be handled.
      *
      * @param array $args arguments from rcmail
-     * @return array modified arguments
+* @return array modified arguments
      */
     function startup($args) {
         // intercept PGT callback action from CAS server
         if ($args['action'] == 'pgtcallback') {
             // initialize CAS client
             $this->cas_init();
+
+	    // Handle SignleLogout
+	    phpCAS::handleLogoutRequests(false);
             
             // retrieve and store PGT if present
             phpCAS::forceAuthentication();
@@ -96,7 +100,7 @@ class cas_authn extends rcube_plugin {
 
             // Force the user to log in to CAS, using a redirect if necessary.
             phpCAS::forceAuthentication();
-
+            
             // If control reaches this point, user is authenticated to CAS.
             $user = phpCAS::getUser();
             $pass = '';
@@ -109,12 +113,12 @@ class cas_authn extends rcube_plugin {
             else {
                 $pass = $cfg['cas_imap_password'];
             }
-    
+   
             // Do Roundcube login actions
             $RCMAIL = rcmail::get_instance();
             $RCMAIL->login($user, $pass, $RCMAIL->autoselect_host());
             $RCMAIL->session->remove('temp');
-            $RCMAIL->session->regenerate_id(false);
+	    // We don't change the session id which is the CAS login ST.
             $RCMAIL->session->set_auth_cookie();
      
             // log successful login
@@ -173,7 +177,6 @@ class cas_authn extends rcube_plugin {
                 $args['retry'] = true;
             }
         }
-        
         return $args;
     }
  
@@ -232,7 +235,6 @@ class cas_authn extends rcube_plugin {
                                 )
                             );
         $args['content'] = $caslogin_content . $args['content'];
-
         return $args;
     }
 
@@ -242,18 +244,30 @@ class cas_authn extends rcube_plugin {
      */
     private function cas_init() {
         if (!$this->cas_inited) {
-            // retrieve configuration
+	    $RCMAIL = rcmail::get_instance();
+
+	    $old_session = $_SESSION;
+        
+	    if (!isset($_SESSION['session_inited'])) {    
+	    	// If the session isn't 'inited' by CAS 
+		// We destroy the session to the CAS client be able to init it
+		session_destroy();
+	    }
+
             $cfg = rcmail::get_instance()->config->all();
 
             // include phpCAS
             require_once('CAS.php');
             
             // Uncomment the following line for phpCAS call tracing, helpful for debugging.
-            phpCAS::setDebug('/tmp/cas_debug.log');
+            if ($cfg['cas_debug']) {
+                phpCAS::setDebug($cfg['cas_debug_file']);
+            }
 
             // initialize CAS client
             if ($cfg['cas_proxy']) {
-                phpCAS::proxy(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
+		// Manage the session only the first time
+                phpCAS::proxy(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], !isset($_SESSION['session_inited']));
 
                 // set URL for PGT callback
                 phpCAS::setFixedCallbackURL($this->generate_url(array('action' => 'pgtcallback')));
@@ -262,8 +276,13 @@ class cas_authn extends rcube_plugin {
                 phpCAS::setPGTStorageFile('xml', $cfg['cas_pgt_dir']);
             }
             else {
-                phpCAS::client(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
+		// Manage the session only the first time
+                phpCAS::client(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], !isset($_SESSION['session_inited']));
             }
+
+	    // SLO callback
+	    phpCAS::setPostAuthenticateCallback("handleCasLogin", $old_session);
+	    phpCAS::setSingleSignoutCallback(array($this, "handleSingleLogout"));
 
             // set service URL for authorization with CAS server
             phpCAS::setFixedServiceURL($this->generate_url(array('action' => 'caslogin')));
@@ -283,10 +302,27 @@ class cas_authn extends rcube_plugin {
             phpCAS::setServerLoginURL($cfg['cas_login_url']);
             phpCAS::setServerLogoutURL($cfg['cas_logout_url']);
 
+	    if (!isset($_SESSION['session_inited'])) {    
+	    	// If the session isn't 'inited' by CAS
+		// we keep the last session 
+	    	$_SESSION = array_merge($_SESSION, $old_session);
+	    	$_SESSION['session_inited'] = true;
+	    }
+
             $this->cas_inited = true;
         }
     }
     
+    /**
+     * Handle the logout comming from CAS server (globalLogout)
+     *
+     * @param ticket is the ST name given by CAS for the user when CAS was requested to authenticate on Roundcube.
+     */
+    function handleSingleLogout($ticket) {
+	$RCMAIL = rcmail::get_instance();
+	$RCMAIL->session->destroy($ticket);
+    }
+
     /**
      * Build full URLs to this instance of RoundCube for use with CAS servers
      * 

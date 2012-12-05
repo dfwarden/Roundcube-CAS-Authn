@@ -16,6 +16,9 @@ $rcmail_config['cas_force'] = false;
 //     If set to false, the IMAP password specified below will be used.
 $rcmail_config['cas_proxy'] = true;
 
+// phpCAS debug file
+$rcmail_config['cas_debug_file'] = '/tmp/cas_debug.log';
+
 // directory where PGTs will be temporarily stored. Will only be used if
 //     cas_proxy is set to true.
 $rcmail_config['cas_pgt_dir'] = '/tmp';
