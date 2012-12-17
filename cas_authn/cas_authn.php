@@ -38,6 +38,7 @@ class cas_authn extends rcube_plugin {
         $this->add_hook('startup', array($this, 'startup'));
         $this->add_hook('imap_connect', array($this, 'imap_connect'));
         $this->add_hook('smtp_connect', array($this, 'smtp_connect'));
+        $this->add_hook('sieverules_connect', array($this, 'sieverules_connect'));
         $this->add_hook('template_object_loginform', array($this, 'add_cas_login_html'));
     }
 
@@ -207,6 +208,36 @@ class cas_authn extends rcube_plugin {
             }
         }
             
+        return $args;
+    }
+
+    /**
+     * Inject Sieve authentication credentials
+     * If you are using this plugin in proxy mode, this will set the password
+     * to be used in sieverules_connect() to a new Proxy Ticket for opt_cas_imap_name.
+     * If you are not using this plugin in proxy mode, it will do nothing.
+     * If you are using normal authentication, it will do nothing.
+     *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
+     */
+    function sieverules_connect($args) {
+        // retrieve configuration
+        $cfg = rcmail::get_instance()->config->all();
+
+        // RoundCube is acting as CAS proxy
+        if ($cfg['opt_cas_proxy']) {
+            // initialize CAS client
+            $this->cas_init();
+
+            // retrieve a new proxy ticket and use it as SMTP password
+            // Without forceAuthentication() then retrievePT() fails.
+            if (phpCAS::isSessionAuthenticated()) {
+                phpCAS::forceAuthentication();
+                $args['password'] = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
+            }
+        }
+
         return $args;
     }
 
