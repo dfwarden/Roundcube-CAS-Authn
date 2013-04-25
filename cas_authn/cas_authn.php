@@ -376,7 +376,13 @@ class cas_authn extends rcube_plugin {
                 $delm = '&';
             }
         }
-        return $protocol . '://' . $_SERVER['SERVER_NAME'] . $port . $path . $parsed_params;
+        $cfg = rcmail::get_instance()->config->all();
+        if ( $cfg['cas_webmail_server_name'] ) {
+          $serverName = $cfg['cas_webmail_server_name'];
+        } else {
+          $serverName=$_SERVER['SERVER_NAME'];
+        }
+        return $protocol . '://' . $serverName . $port . $path . $parsed_params;
     }
 
     private function strleft($s1, $s2) {
