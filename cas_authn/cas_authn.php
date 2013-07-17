@@ -119,7 +119,7 @@ class cas_authn extends rcube_plugin {
             $RCMAIL = rcmail::get_instance();
             $RCMAIL->login($user, $pass, $RCMAIL->autoselect_host());
             $RCMAIL->session->remove('temp');
-	    // We don't change the session id which is the CAS login ST.
+			// We don't change the session id which is the CAS login ST.
             $RCMAIL->session->set_auth_cookie();
      
             // log successful login
@@ -154,6 +154,15 @@ class cas_authn extends rcube_plugin {
         
         // RoundCube is acting as CAS proxy
         if ($cfg['cas_proxy']) {
+
+            // check expiration of PT caching time
+			$ptExpired = false;
+            if (time() - $_SESSION['cas_pt_time'][php_uname('n')] > $cfg['cas_imap_pt_expiration_time']) {
+                // Clear PT caching if expired
+                $_SESSION['cas_pt'][php_uname('n')] = false;
+				$ptExpired = true;
+            }
+
             // a proxy ticket has been retrieved, the IMAP server caches proxy tickets, and this is the first connection attempt
             if ($_SESSION['cas_pt'][php_uname('n')] && $cfg['cas_imap_caching'] && $args['attempt'] == 1) {
                 // use existing proxy ticket in session
@@ -164,12 +173,22 @@ class cas_authn extends rcube_plugin {
             else {
                 // initialize CAS client
                 $this->cas_init();
+				// If PT expired we check the authentication to load all auth infos wich lays in session
+				if ($ptExpired) {
+					phpCAS::checkAuthentication();
+				}       
 
                 // if CAS session exists, use that.
                 // retrieve a new proxy ticket and store it in session
                 if (phpCAS::isSessionAuthenticated()) {
                     $_SESSION['cas_pt'][php_uname('n')] = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
+                    //add PT caching time in session
+                    $_SESSION['cas_pt_time'][php_uname('n')] = time();
                     $args['pass'] = $_SESSION['cas_pt'][php_uname('n')];
+					error_log("New PT : " . $args['pass']);
+					if ($output) {		
+						error_log("Error while retrieving new PT: " . $output);
+					}
                 }
             }
             

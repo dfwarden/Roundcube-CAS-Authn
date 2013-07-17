@@ -40,6 +40,9 @@ $rcmail_config['cas_smtp_name'] = 'name_of_imap_service';
 //    significantly reduces the number of requests made to the CAS server.
 $rcmail_config['cas_imap_caching'] = true;
 
+// Time (in seconds) before expiration of cached IMAP Proxy Ticket. After expiration the PT is renewed.
+$rcmail_config['cas_imap_pt_expiration_time'] = 300;
+
 // password for logging into the IMAP server. Will only be used if cas_proxy
 //     is set to false. The IMAP backend must accept this password for all
 //     authorized users.
