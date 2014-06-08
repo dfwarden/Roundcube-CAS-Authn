@@ -1,45 +1,108 @@
-If you aren't sure what CAS is, check out: http://www.jasig.org/cas
+This Roundcube plugin allows you to authenticate users against
+a CAS server. If you aren't sure what CAS is, check out: http://www.jasig.org/cas
 
 This is a fork of Alex Li's cas_authentication plugin. (http://code.google.com/p/rc-cas-plugin)
-We share some of the same config names so we should not be run together.
-
-The main differences are:
+We share some of the same config names so we should not be run together. The main differences are:
  - This plugin should work with stock Roundcube 0.6+
  - This plugin can be configured to not force all users to have to use CAS
- - This plugin supports using a CAS proxy ticket for SMTP authn
+ - This plugin supports using a CAS proxy ticket for SMTP and Managesieve authn
 
 This plugin has been tested and works with the following:
- - Roundcube 0.6-0.8
+ - Roundcube 0.6-0.8,1.0.1
  - RHEL (specifically, Oracle Enterprise Linux) 6.1-6.2 x64 - DEBIAN Squeeze 2.6.26 x64
  - JASIG CAS 3.3.2, 3.4.11, 3.4.14 (http://www.jasig.org/cas)
  - pam_cas (https://sourcesup.cru.fr/frs/?group_id=213, Pam_cas-2.0.11-esup-2.0.5.tar.gz)
- - phpCAS 1.2.2 (php-pear-CAS from EPEL)
+ - phpCAS 1.3.0
+   - There was a function signature change in setPGTStorageFile() between 1.2.x and 1.3.x.
+   - Please use phpCAS 1.3.x
  - up-imapproxy 1.2.7 (http://www.imapproxy.org)
  - Dovecot 2.0.13 (http://dovecot.org)
 
-Setup is very similar to most Roundcube plugins. Copy cas_authn to your 
+Installation is similar to most Roundcube plugins. Copy cas_authn to your 
 Roundcube plugin directory. Then, copy config.inc.php.dist to config.inc.php,
-edit for your environment, and activate the plugin. 
+edit for your environment, and activate the plugin.
+
+You may feel that config.inc.php.dist isn't very clear if you are new to CAS.
+Hopefully the following can point you in the right direction.
+
+At the most basic level, this plugin intercepts and modifies the passwords sent to
+your backend IMAP service. (It can also do this for your SMTP and Managesieve services.)
+There are two possible modes. In both modes, a user may (or may be forced to) authenticate
+to CAS first.
+
+  1) "Proxy"
+     After detecting a valid CAS session, the plugin requests
+     a Proxy Ticket for your IMAP service, which is stored in the user's PHP session and
+     used as the password for the IMAP service whenever an IMAP connection is made.
+     For this to work, your IMAP service must be able to authenticate users via
+     CAS tickets.
+
+     This mode is recommended mostly for security reasons. It does not rely on a master 
+     password that would have to exist as plain text in your plugin config.
+
+  2) "Master User"
+     After detecting a valid CAS session, the plugin uses the configured "master password"
+     as the password for that user connecting to the IMAP service.
+
+     AFAIK, Dovecot is the only IMAP service with this functionality, and to take advantage
+     of it you usually need to modify the username in some way. This plugin does not do that
+     right now.
+
+Really, everyone should use "proxy" mode. To do this, you will need an IMAP service that can
+authenticate users by CAS tickets. The best way to do that is to use pam_cas.
+
+Setting up pam_cas (In case you can't translate the French link above)
+  1) Extract pam_cas source
+  2) Copy makefile for your distro (Makefile.Redhat) to Makefile
+  3) Edit Makefile to suit your environment
+  4) Build pam_cas.so with make
+  5) You can build castest, a command-line utility to test pam_cas with make test
+  6) Make sure all the libraries can be located for pam_cas.so with ldd pam_cas.so
+  7) Copy pam_cas.conf from the pam_cas source to /etc, edit to your environment.
+    a) "debug" is a useful option. It writes to syslog level LOG_DEBUG so you 
+       may have to update your syslog settings to see those entries.
+    b) Many people get confused by the proxy directive. That should be the PGT
+       callback URL. (https://yourdomain.com/roundcube/?_action=pgtcallback)
+  8) Log in to CAS with service set to your IMAP service in CAS (that you create
+     in the CAS Service Manager). So if your CAS server is https://yourdomain.com/cas
+     you would load https://yourdomain.com/cas/Login?service=imaps://imap.yourdomain.com
+     Copy the service ticket in the resulting URL to your clipboard.
+  9) Run castest <IMAP CAS service> <Service Ticket in clipboard>, replacing the last 2 entities
+     with your values for them. You should see the parameters for service and ticket match what
+     you entered, and the result should be success.
+
+Once you can successfully do castest, you need to update your IMAP service's PAM config to use pam_cas.
+There are 2 parameters for pam_cas.so:
+  - -S<service> where <service> is the CAS service you want to authenticate to
+  - -F<config> where <config> is the full path to the pam_cas config file. (default: /etc/pam_cas.conf)
+
+As with all IMAP webmail software, an IMAP proxy is recommended. In addition, I recommend paying close
+attention to your IMAP service's authentication cache settings. For now you want to enable your authn
+cache and disable the negative ttl. There is currently an issue where the initial Roundcube login will
+create and send two different CAS tickets to IMAP. This is an inefficient inconvenience but does not
+seem to be fatal if your authn caches are tweaked properly. See https://github.com/dfwarden/Roundcube-CAS-Authn/issues/9
+for updates.
 
 Some things to be aware of:
 
   - This plugin assumes your IMAP server can authenticate 
     (a) CAS proxy tickets (if cas_proxy is true) 
-	- or - 
+    - or - 
     (b) any user using the "master" password (if cas_proxy is false and 
         cas_imap_password is set). 
+
     For (a), the most common way to do this is with pam_cas. See
     http://www.esup-portail.org/consortium/espace/SSO_1B/tech/cas/cas_pam.html 
     for help configuring and testing that. (It is in French, but Google 
     Translate does a good job.)
 
-  - If cas_proxy is true and Roundcube is set to authenticate to SMTP, 
-    this plugin will generate a PT for your SMTP service and send that to 
-    the SMTP server. As with IMAP, you should test this via telnet to make 
-    sure your SMTP server is validating CAS tickets.
+  - If cas_proxy is true and Roundcube is set to authenticate to SMTP or
+    Managesieve, this plugin will generate a PT for your SMTP service and 
+    send that to the SMTP server. As with IMAP, you should test this via 
+    telnet to make sure your SMTP server is validating CAS tickets.
 
   - If you are running Roundcube on multiple servers behind a load balancer
-    and cas_proxy is true, your PGTIOU storage must be shared; when the CAS
+    and cas_proxy is true, your PGT storage must be shared; when the CAS
     server does the PGT callback there is no guarantee (unless you do 
     something special) that it will hit the same host the user is on. And 
     if you're not sure what "PGT callback" is, check out 
